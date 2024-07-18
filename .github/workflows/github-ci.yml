@@ -1,0 +1,73 @@
+name: aws-cdk-ec2-efs-pipeline
+run-name: aws-cdk-ec2-efs-pipeline-${{ github.ref }}
+on: 
+  push:
+  workflow_dispatch:
+env:
+  REGION: 'ap-southeast-2'
+concurrency: ${{ github.workflow }}-${{ github.ref }}-pipeline
+jobs:
+  get_branch_name:
+    runs-on: [linux, self-hosted, demo]
+    steps: 
+      - shell: bash
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch
+    outputs:
+      branch: ${{ steps.extract_branch.outputs.branch }}
+
+  deploy_dev:
+    runs-on: [linux, self-hosted, demo]
+    container:
+      image: 'node:20'
+    needs: 
+      - get_branch_name
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      ENVIRONMENT_NAME: ${{ needs.get_branch_name.outputs.branch }}
+      ACCOUNT_NAME: 'sandpit1'
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID_SANDPIT1 }} 
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-actions-deployment-role
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.REGION }}
+      - name: deploy
+        run: |
+          npm install
+          npx cdk deploy --require-approval=never
+
+  deploy_prod:
+    runs-on: [linux, self-hosted, demo]
+    if: github.ref == 'refs/heads/main'
+    container:
+      image: 'node:20'
+    needs: 
+      - get_branch_name
+      - deploy_dev
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      ENVIRONMENT_NAME: ${{ needs.get_branch_name.outputs.branch }}
+      ACCOUNT_NAME: 'sandpit2'
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID_SANDPIT2 }} 
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-actions-deployment-role
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ env.REGION }}
+      - name: deploy
+        run: |
+          npm install
+          npx cdk deploy --require-approval=never          

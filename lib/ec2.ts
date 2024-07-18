@@ -83,6 +83,7 @@ export class Ec2InstanceStack extends Stack {
             },
             securityGroup: sgEFS,
         })
+        efsFileSystem.addAccessPoint('accesspoint')
         efsFileSystem.applyRemovalPolicy( core.RemovalPolicy.DESTROY )
 
         const Ec2Instance = new ec2.Instance(this, 'simple ec2', {
