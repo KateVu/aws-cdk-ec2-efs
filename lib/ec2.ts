@@ -122,7 +122,7 @@ export class Ec2InstanceStack extends Stack {
         })
         new CfnOutput(this, `efs`, {
             value: efsFileSystem.fileSystemId,
-            exportName: `ec2-instance-id`
+            exportName: `${this.stackName}-efs-id`
         })
     }
 }
