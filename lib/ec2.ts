@@ -79,7 +79,7 @@ export class Ec2InstanceStack extends Stack {
             encrypted: true, // file system is not encrypted by default
             performanceMode: efs.PerformanceMode.GENERAL_PURPOSE, // default
             vpcSubnets: {
-                subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
+                subnetType: ec2.SubnetType.PRIVATE_ISOLATED
             },
             securityGroup: sgEFS,
         })
